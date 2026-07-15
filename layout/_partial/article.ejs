@@ -1,13 +1,17 @@
 <article id="<%= post.layout %>-<%= post.slug %>" class="h-entry article article-type-<%= post.layout %>" itemprop="blogPost" itemscope itemtype="https://schema.org/BlogPosting">
-  <div class="article-meta">
-    <%- partial('post/date', {class_name: 'article-date', date_format: null}) %>
-    <%- partial('post/category') %>
-  </div>
   <div class="article-inner">
     <%- partial('post/gallery') %>
     <% if (post.link || post.title){ %>
       <header class="article-header">
         <%- partial('post/title', {class_name: 'p-name article-title'}) %>
+        <div class="article-subtitle">
+          <span class="article-subtitle-date"><%= date(post.date, 'YYYY-MM-DD') %></span>
+          <span class="article-subtitle-sep">&middot;</span>
+          <span class="article-subtitle-reading"><%= reading_time(post) %> min read</span>
+          <span class="article-subtitle-sep">&middot;</span>
+          <span class="article-subtitle-words"><%= word_count_formatted(post) %> words</span>
+          <span class="article-subtitle-line"></span>
+        </div>
       </header>
     <% } %>
     <%- partial('toc') %>
