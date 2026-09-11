@@ -34,21 +34,88 @@
   } else if (is_tag()){
     title = __('tag') + ': ' + page.tag;
   }
+
+  var socialTitle = (title ? title + ' | ' : '') + config.title;
+  var socialDescription = page.description || ((!is_post() && config.description) ? config.description : '') || page.excerpt || page.content || '';
+  socialDescription = strip_html(socialDescription).replace(/\s+/g, ' ').trim().substring(0, 200);
+
+  var socialConfig = theme.social_card || {};
+  var canonicalPath = (page.path || '').replace(/index\.html$/, '');
+  var canonicalUrl = full_url_for(canonicalPath);
+  var socialImage = page.thumbnail || page.cover || page.banner || page.image || socialConfig.default_image;
+
+  // Keep existing posts useful without requiring front-matter changes: use the
+  // first Markdown image when no social thumbnail was specified.
+  if (!socialImage && page.raw) {
+    var firstMarkdownImage = page.raw.match(/!\[[^\]]*\]\((?:<)?([^\s)>]+)(?:>)?(?:\s+["'][^"']*["'])?\)/);
+    if (firstMarkdownImage) {
+      socialImage = firstMarkdownImage[1];
+      // hexo-asset-image publishes files from a post's asset directory beside
+      // the post, even when old content uses ./post-slug/file.ext syntax.
+      if (page.slug) {
+        socialImage = socialImage.replace(new RegExp('^\\./' + page.slug.replace(/[.*+?^${}()|[\]\\]/g, '\\$&') + '/'), '');
+      }
+    }
+  }
+  if (!socialImage && page.content) {
+    var firstImage = page.content.match(/<img[^>]+src=["']([^"']+)["']/i);
+    if (firstImage) socialImage = firstImage[1];
+  }
+
+  if (socialImage && !/^\/Users\//.test(socialImage)) {
+    try {
+      socialImage = new URL(socialImage, canonicalUrl).href;
+    } catch (error) {
+      socialImage = '';
+    }
+  } else if (socialImage) {
+    // A local filesystem path cannot be fetched by social-media crawlers.
+    socialImage = '';
+  }
   %>
-  <title><% if (title){ %><%= title %> | <% } %><%= config.title %></title>
+  <title><%= socialTitle %></title>
   <%- css('/css/fonts/Chinese-normal-normal.min') %>
   <%- css('/css/fonts/ChineseMono-normal-normal.min') %>
   <%- css('/css/fonts/Chinese-italic-normal.min') %>
   <%- css('/css/fonts/Chinese-normal-bold.min') %>
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <% if (page.description){ %>
-  <meta name="description" itemprop="description" content="<%= page.description %>">
-  <% } else if (config.description&&(!is_post())){ %>
-  <meta name="description" content="<%= config.description %>">
-  <% } else if (page.excerpt){ %>
-  <meta name="description" content="<%= strip_html(page.excerpt).replace(/^s*/, '').replace(/s*$/, '') %>">
-  <% } else if (page.content){ %>
-  <meta name="description" content="<%= strip_html(page.content).replace(/^s*/, '').replace(/s*$/, '').substring(0, 150) %>">
+  <% if (socialDescription) { %>
+  <meta name="description" itemprop="description" content="<%= socialDescription %>">
+  <% } %>
+  <link rel="canonical" href="<%= canonicalUrl %>">
+
+  <meta property="og:type" content="<%= is_post() ? 'article' : 'website' %>">
+  <meta property="og:site_name" content="<%= config.title %>">
+  <meta property="og:title" content="<%= socialTitle %>">
+  <meta property="og:url" content="<%= canonicalUrl %>">
+  <% if (socialDescription) { %>
+  <meta property="og:description" content="<%= socialDescription %>">
+  <% } %>
+  <% if (socialImage) { %>
+  <meta property="og:image" content="<%= socialImage %>">
+  <meta property="og:image:alt" content="<%= page.thumbnail_alt || title || config.title %>">
+  <% } %>
+  <% if (is_post() && page.date) { %>
+  <meta property="article:published_time" content="<%= page.date.toISOString() %>">
+  <% } %>
+  <% if (is_post() && page.updated) { %>
+  <meta property="article:modified_time" content="<%= page.updated.toISOString() %>">
+  <% } %>
+
+  <meta name="twitter:card" content="<%= socialImage ? (socialConfig.card || 'summary_large_image') : 'summary' %>">
+  <meta name="twitter:title" content="<%= socialTitle %>">
+  <% if (socialDescription) { %>
+  <meta name="twitter:description" content="<%= socialDescription %>">
+  <% } %>
+  <% if (socialImage) { %>
+  <meta name="twitter:image" content="<%= socialImage %>">
+  <meta name="twitter:image:alt" content="<%= page.thumbnail_alt || title || config.title %>">
+  <% } %>
+  <% if (socialConfig.site) { %>
+  <meta name="twitter:site" content="<%= socialConfig.site %>">
+  <% } %>
+  <% if (socialConfig.creator) { %>
+  <meta name="twitter:creator" content="<%= socialConfig.creator %>">
   <% } %>
   <% if (config.feed) { %>
     <%- feed_tag() %>
